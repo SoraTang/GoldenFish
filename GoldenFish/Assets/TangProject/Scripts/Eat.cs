@@ -31,7 +31,7 @@ public class Eat : MonoBehaviour
             Destroy(other.gameObject);
 
             // 判断是否达到第七个，启动下落物体
-            if (score == 7 && !objectFalling)
+            if (score == 9 && !objectFalling)
             {
                 StartFallingObject();
             }

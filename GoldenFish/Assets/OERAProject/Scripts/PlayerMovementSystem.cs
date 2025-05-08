@@ -36,6 +36,10 @@ public class PlayerMovementSystem : MonoBehaviour
     public GameObject objectToEnableOn2ndMove;
     public GameObject objectToEnableOn5thMove;
 
+    [Header("植物生长")]
+    public Transform plantModel;        // 🌱 新增：要生长的植物模型
+    public float growthPerMove = 0.1f;  // 🌱 新增：每次生长的 Y 轴增量
+
     private bool isMoving;
     private int currentMoveCount;
     private bool handsWereInTrigger;
@@ -44,10 +48,11 @@ public class PlayerMovementSystem : MonoBehaviour
     [EventRef] public string catchSoundEvent;
     [EventRef] public string blossom;
 
-
     [Header("动画控制")]
-    public Animator targetAnimator; // 要控制的Animator组件
-    public string bloomParameterName = "bloom"; // Animator中的布尔参数名
+    public Animator targetAnimator;
+    public string bloomParameterName = "bloom";
+
+    private float lastMoveTime = -Mathf.Infinity;
 
     void Start()
     {
@@ -57,13 +62,13 @@ public class PlayerMovementSystem : MonoBehaviour
     void Update()
     {
         if (maxMoveCount > 0 && currentMoveCount >= maxMoveCount) return;
-;
+
         Vector3 triggerPos = head.position + head.up * triggerHeight;
         bool leftHandIn = Vector3.Distance(leftHandCollider.transform.position, triggerPos) < triggerRadius;
         bool rightHandIn = Vector3.Distance(rightHandCollider.transform.position, triggerPos) < triggerRadius;
         bool handsInTrigger = leftHandIn && rightHandIn;
 
-        if (!isMoving)
+        if (!isMoving && Time.time - lastMoveTime >= moveDuration)
         {
             if (requireExit)
             {
@@ -77,6 +82,7 @@ public class PlayerMovementSystem : MonoBehaviour
                     Vector3 moveDirection = CalculateMoveDirection();
                     StartCoroutine(MovePlayer(moveDirection));
                     requireExit = true;
+                    lastMoveTime = Time.time;
                 }
             }
         }
@@ -90,54 +96,59 @@ public class PlayerMovementSystem : MonoBehaviour
         float angle = Vector3.Angle(Vector3.up, headUp);
 
         if (angle > maxAngleDeviation)
-        {
             headUp = Vector3.Slerp(Vector3.up, headUp, maxAngleDeviation / angle);
-        }
 
         return headUp.normalized;
     }
 
-    IEnumerator MovePlayer(Vector3 direction)
+IEnumerator MovePlayer(Vector3 direction)
+{
+    isMoving = true;
+    currentMoveCount++;
+
+    // 阶段触发
+    if (currentMoveCount == 3 && objectToEnableOn2ndMove != null)
+        objectToEnableOn2ndMove.SetActive(true);
+    else if (currentMoveCount == 10 && objectToEnableOn5thMove != null)
+        objectToEnableOn5thMove.SetActive(true);
+
+    // 禁用 Renderer Features
+    if (currentMoveCount >= disableAfterMoves && !hasDisabledFeatures)
+        DisableRendererFeatures();
+
+    // 插值移动
+    Vector3 startPos = xrOrigin.transform.position;
+    Vector3 targetPos = startPos + direction * moveDistance;
+    float elapsed = 0f;
+    while (elapsed < moveDuration)
     {
-        isMoving = true;
-        currentMoveCount++;
+        xrOrigin.transform.position = Vector3.Lerp(startPos, targetPos, elapsed / moveDuration);
+        elapsed += Time.deltaTime;
+        yield return null;
+    }
+    xrOrigin.transform.position = targetPos;
 
-        // 第2次与第5次移动时启用指定物体
-        if (currentMoveCount == 2 && objectToEnableOn2ndMove != null)
+    // 🌱 平滑增长植物 Y 轴尺寸
+    if (plantModel != null)
+    {
+        float growthDuration = 0.5f; // 持续时间（秒）
+        Vector3 startScale = plantModel.localScale;
+        Vector3 targetScale = new Vector3(startScale.x, startScale.y + growthPerMove, startScale.z);
+
+        float growthTime = 0f;
+        while (growthTime < growthDuration)
         {
-            objectToEnableOn2ndMove.SetActive(true);
-            Debug.Log("第2次移动时启用了指定物体");
-        }
-        else if (currentMoveCount == 5 && objectToEnableOn5thMove != null)
-        {
-            objectToEnableOn5thMove.SetActive(true);
-            Debug.Log("第5次移动时启用了指定物体");
-        }
-
-        // 移动前检查是否需要关闭Renderer Features
-        if (currentMoveCount >= disableAfterMoves && !hasDisabledFeatures)
-        {
-            DisableRendererFeatures();
-        }
-
-        
-
-        Vector3 startPos = xrOrigin.transform.position;
-        Vector3 targetPos = startPos + direction * moveDistance;
-
-        float elapsed = 0f;
-        while (elapsed < moveDuration)
-        {
-            xrOrigin.transform.position = Vector3.Lerp(startPos, targetPos, elapsed / moveDuration);
-            elapsed += Time.deltaTime;
+            plantModel.localScale = Vector3.Lerp(startScale, targetScale, growthTime / growthDuration);
+            growthTime += Time.deltaTime;
             yield return null;
         }
-
-        xrOrigin.transform.position = targetPos;
-        isMoving = false;
-
-        Debug.Log($"移动完成 ({currentMoveCount}/{maxMoveCount}) 方向: {direction}");
+        plantModel.localScale = targetScale;
     }
+
+    isMoving = false;
+    Debug.Log($"移动完成 ({currentMoveCount}/{maxMoveCount}) 方向: {direction}");
+}
+
 
     void DisableRendererFeatures()
     {
@@ -148,7 +159,6 @@ public class PlayerMovementSystem : MonoBehaviour
         }
 
         bool anyFeatureDisabled = false;
-
         foreach (var featureName in featuresToDisable)
         {
             foreach (var feature in rendererData.rendererFeatures)
@@ -167,16 +177,13 @@ public class PlayerMovementSystem : MonoBehaviour
         {
             rendererData.SetDirty();
             GraphicsSettings.renderPipelineAsset = GraphicsSettings.renderPipelineAsset;
-            // 设置Animator的bloom参数为true
+
             if (targetAnimator != null)
             {
                 targetAnimator.SetBool(bloomParameterName, true);
                 Debug.Log($"已设置Animator参数 {bloomParameterName} = true");
             }
-            else
-            {
-                Debug.LogWarning("未分配目标Animator，无法设置bloom参数");
-            }
+            else Debug.LogWarning("未分配目标Animator，无法设置bloom参数");
 
             RuntimeManager.PlayOneShot(blossom);
             hasDisabledFeatures = true;
@@ -217,8 +224,6 @@ public class PlayerMovementSystem : MonoBehaviour
 
         Vector3 triggerPos = head.position + head.up * triggerHeight;
         Gizmos.DrawWireSphere(triggerPos, triggerRadius);
-
-        Vector3 moveDir = CalculateMoveDirection();
-        Gizmos.DrawLine(triggerPos, triggerPos + moveDir * moveDistance * 0.5f);
+        Gizmos.DrawLine(triggerPos, triggerPos + CalculateMoveDirection() * moveDistance * 0.5f);
     }
 }

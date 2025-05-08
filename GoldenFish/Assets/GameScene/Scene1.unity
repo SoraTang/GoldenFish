@@ -4977,7 +4977,7 @@ PrefabInstance:
     - target: {fileID: 6293375199285309962, guid: 6a1459f37f665934cba843f879d1b013,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6359913678551081024, guid: 6a1459f37f665934cba843f879d1b013,
         type: 3}
@@ -35585,8 +35585,9 @@ MonoBehaviour:
   character: {fileID: 2092821080}
   sinkSpeed: 2.8
   waterLevel: 0
-  numberOfObjects: 7
-  spawnInterval: 10
+  numberOfObjects: 11
+  spawnInterval: 7
+  shortInterval: 0.3
 --- !u!4 &1946501319
 Transform:
   m_ObjectHideFlags: 0
