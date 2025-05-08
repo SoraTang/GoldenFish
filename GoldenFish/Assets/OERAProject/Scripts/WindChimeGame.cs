@@ -1,57 +1,62 @@
 using UnityEngine;
 using UnityEngine.XR;
-using FMODUnity; // Ìí¼ÓFMODÃüÃû¿Õ¼ä
+using FMODUnity;
 
 public class WindChimeGame : MonoBehaviour
 {
-    [Header("·çÁ£×ÓÉèÖÃ")]
+    [Header("é£ç²’å­è®¾ç½®")]
     public GameObject windParticlePrefab;
-    public Transform windSpawnPlane; // Éú³É·çµÄÆ½Ãæ
-    public Vector2 spawnSize = new Vector2(5f, 3f); // Éú³ÉÇøÓò´óĞ¡
-    public Vector2 windSpeedRange = new Vector2(1f, 3f); // ·çËÙ·¶Î§
-    public Vector2 spawnIntervalRange = new Vector2(0.5f, 2f); // Éú³É¼ä¸ô·¶Î§
+    public Transform windSpawnPlane;
+    public Vector2 spawnSize = new Vector2(5f, 3f);
+    public Vector2 windSpeedRange = new Vector2(1f, 3f);
+    public Vector2 spawnIntervalRange = new Vector2(0.5f, 2f);
 
-    [Header("Íæ¼ÒÉèÖÃ")]
+    [Header("ç©å®¶æ‰‹éƒ¨")]
     public Transform leftHand;
     public Transform rightHand;
-    public float catchRadius = 0.3f; // ²¶×½°ë¾¶
+    public float catchRadius = 0.3f;
 
-    [Header("Ğ§¹ûÉèÖÃ")]
+    [Header("ç‰¹æ•ˆä¸éŸ³æ•ˆ")]
     public ParticleSystem catchEffect;
 
-    [Header("FMODÉèÖÃ")]
-    [EventRef] public string catchSoundEvent; // FMODÊÂ¼şÂ·¾¶
+    [Header("FMODéŸ³æ•ˆ")]
+    [EventRef] public string catchSoundEvent;
 
-    [Header("ÓÎÏ·ÉèÖÃ")]
-    public int maxCatches = 10; // ×î´ó²¶×½´ÎÊı
-    private int currentCatches = 0; // µ±Ç°²¶×½´ÎÊı
-    private bool gameActive = true; // ÓÎÏ·ÊÇ·ñ½øĞĞÖĞ
+    [Header("æ¸¸æˆé€»è¾‘")]
+    public int maxCatches = 10;
+    private int currentCatches = 0;
+    private bool gameActive = true;
+
+    [Header("ç‰©å“æ¿€æ´»")]
+    public GameObject itemAt5;   // ç¬¬5æ¬¡æ•æ‰å¯ç”¨
+    public GameObject itemAt12;  // ç¬¬12æ¬¡æ•æ‰å¯ç”¨
 
     private float nextSpawnTime;
 
     void Start()
     {
         nextSpawnTime = Time.time + Random.Range(spawnIntervalRange.x, spawnIntervalRange.y);
+
+        // ç¡®ä¿ä¸¤ä¸ªç‰©å“åˆå§‹ä¸ºä¸æ¿€æ´»
+        if (itemAt5 != null) itemAt5.SetActive(false);
+        if (itemAt12 != null) itemAt12.SetActive(false);
     }
 
     void Update()
     {
         if (!gameActive) return;
 
-        // Éú³ÉĞÂµÄ·çÁ£×Ó
         if (Time.time >= nextSpawnTime)
         {
             SpawnWindParticle();
             nextSpawnTime = Time.time + Random.Range(spawnIntervalRange.x, spawnIntervalRange.y);
         }
 
-        // ¼ì²â²¶×½
         DetectCatches();
     }
 
     void SpawnWindParticle()
     {
-        // ÔÚÉú³ÉÆ½ÃæÉÏËæ»úÎ»ÖÃ
         Vector3 spawnPos = windSpawnPlane.position +
                           windSpawnPlane.right * Random.Range(-spawnSize.x / 2, spawnSize.x / 2) +
                           windSpawnPlane.up * Random.Range(-spawnSize.y / 2, spawnSize.y / 2);
@@ -59,29 +64,24 @@ public class WindChimeGame : MonoBehaviour
         GameObject wind = Instantiate(windParticlePrefab, spawnPos, Quaternion.identity);
         WindParticle wp = wind.AddComponent<WindParticle>();
 
-        // ÉèÖÃ·çËÙºÍ·½Ïò(³¯ÏòÍæ¼Ò)
         wp.speed = Random.Range(windSpeedRange.x, windSpeedRange.y);
         wp.direction = -windSpawnPlane.forward;
 
-        // ×Ô¶¯Ïú»Ù
         Destroy(wind, 10f);
     }
 
     void DetectCatches()
     {
-        // »ñÈ¡³¡¾°ÖĞËùÓĞ·çÁ£×Ó
         WindParticle[] winds = FindObjectsOfType<WindParticle>();
 
         foreach (WindParticle wind in winds)
         {
-            // ¼ì²â×óÊÖ
             if (Vector3.Distance(leftHand.position, wind.transform.position) < catchRadius)
             {
                 CatchWind(wind.gameObject, leftHand.position);
                 break;
             }
 
-            // ¼ì²âÓÒÊÖ
             if (Vector3.Distance(rightHand.position, wind.transform.position) < catchRadius)
             {
                 CatchWind(wind.gameObject, rightHand.position);
@@ -92,35 +92,41 @@ public class WindChimeGame : MonoBehaviour
 
     void CatchWind(GameObject wind, Vector3 catchPosition)
     {
-        // ²¥·ÅFMODÒôĞ§
         if (!string.IsNullOrEmpty(catchSoundEvent))
         {
             RuntimeManager.PlayOneShot(catchSoundEvent, catchPosition);
         }
 
-        // ²¥·ÅÁ£×ÓĞ§¹û
         if (catchEffect != null)
         {
             ParticleSystem effect = Instantiate(catchEffect, catchPosition, Quaternion.identity);
             Destroy(effect.gameObject, 2f);
         }
 
-        // Ôö¼Ó²¶×½¼ÆÊı
         currentCatches++;
 
-        // ¼ì²éÊÇ·ñ´ïµ½×î´ó²¶×½´ÎÊı
+        // å¯ç”¨ç¬¬5æ¬¡çš„ç‰©å“
+        if (currentCatches == 5 && itemAt5 != null)
+        {
+            itemAt5.SetActive(true);
+        }
+
+        // å¯ç”¨ç¬¬12æ¬¡çš„ç‰©å“
+        if (currentCatches == 12 && itemAt12 != null)
+        {
+            itemAt12.SetActive(true);
+        }
+
         if (currentCatches >= maxCatches)
         {
             gameActive = false;
-            Debug.Log("ÓÎÏ·½áÊø£¡ÒÑ´ïµ½×î´ó²¶×½´ÎÊı");
+            Debug.Log("æ¸¸æˆç»“æŸï¼Œå·²è¾¾åˆ°æœ€å¤§æ•æ‰æ¬¡æ•°ã€‚");
         }
 
-        // Ïú»Ù·çÁ£×Ó
         Destroy(wind);
     }
 }
 
-// ·çÁ£×ÓĞĞÎª½Å±¾
 public class WindParticle : MonoBehaviour
 {
     public float speed;
@@ -128,7 +134,6 @@ public class WindParticle : MonoBehaviour
 
     void Update()
     {
-        // ÑØÖ¸¶¨·½ÏòÒÆ¶¯
         transform.position += direction.normalized * speed * Time.deltaTime;
     }
 }
