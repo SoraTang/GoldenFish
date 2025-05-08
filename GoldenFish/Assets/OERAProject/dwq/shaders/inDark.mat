@@ -142,8 +142,8 @@ Material:
     - _ZTest: 4
     - _ZWrite: 1
     - _ZWriteControl: 0
-    - _colorResolution: 0.41
-    - _ditherSpread: 0.05
+    - _colorResolution: 0.7
+    - _ditherSpread: 0.08
     - _viewMode: 0
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}

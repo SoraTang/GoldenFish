@@ -207,6 +207,29 @@ MonoBehaviour:
   MinDistance: 0
   MaxDistance: 0
   Length: 0
+--- !u!114 &-839831026859557199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SoundFX/Plant/FX_Blossom
+  m_EditorClassIdentifier: 
+  Path: event:/SoundFX/Plant/FX_Blossom
+  guid: 001b5072a6d57c4685f426b32184e151
+  Banks:
+  - {fileID: 1195961228258963981}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 0
+  MaxDistance: 0
+  Length: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -234,12 +257,15 @@ MonoBehaviour:
   - {fileID: 103041133822799987}
   - {fileID: -3510361575040016066}
   - {fileID: -4765197386920199856}
+  - {fileID: -839831026859557199}
   EditorParameters: []
   MasterBanks:
   - {fileID: 1195961228258963981}
   StringsBanks:
   - {fileID: 2544542042129722645}
+
   stringsBankWriteTime: 638822559770839240
+
   cacheVersion: 6
 --- !u!114 &103041133822799987
 MonoBehaviour:
@@ -279,7 +305,9 @@ MonoBehaviour:
   Path: Assets/Audio/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
+
   lastModified: 638822559770829241
+
   LoadResult: 0
   FileSizes: []
   Exists: 1
@@ -298,11 +326,14 @@ MonoBehaviour:
   Path: Assets/Audio/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
+
   lastModified: 638822559770839240
+
+
   LoadResult: 0
   FileSizes:
   - Name: 
-    Value: 1260
+    Value: 1310
   Exists: 1
 --- !u!114 &3942513861357567958
 MonoBehaviour:
