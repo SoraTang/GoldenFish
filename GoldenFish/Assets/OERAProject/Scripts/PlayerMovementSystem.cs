@@ -42,6 +42,12 @@ public class PlayerMovementSystem : MonoBehaviour
     private bool requireExit;
 
     [EventRef] public string catchSoundEvent;
+    [EventRef] public string blossom;
+
+
+    [Header("动画控制")]
+    public Animator targetAnimator; // 要控制的Animator组件
+    public string bloomParameterName = "bloom"; // Animator中的布尔参数名
 
     void Start()
     {
@@ -114,6 +120,8 @@ public class PlayerMovementSystem : MonoBehaviour
             DisableRendererFeatures();
         }
 
+        
+
         Vector3 startPos = xrOrigin.transform.position;
         Vector3 targetPos = startPos + direction * moveDistance;
 
@@ -159,6 +167,18 @@ public class PlayerMovementSystem : MonoBehaviour
         {
             rendererData.SetDirty();
             GraphicsSettings.renderPipelineAsset = GraphicsSettings.renderPipelineAsset;
+            // 设置Animator的bloom参数为true
+            if (targetAnimator != null)
+            {
+                targetAnimator.SetBool(bloomParameterName, true);
+                Debug.Log($"已设置Animator参数 {bloomParameterName} = true");
+            }
+            else
+            {
+                Debug.LogWarning("未分配目标Animator，无法设置bloom参数");
+            }
+
+            RuntimeManager.PlayOneShot(blossom);
             hasDisabledFeatures = true;
             Debug.Log($"第{currentMoveCount}次移动后，已关闭指定Renderer Features");
         }
