@@ -2155,7 +2155,7 @@ PrefabInstance:
     - target: {fileID: 1725714743124522665, guid: 084572b9f1857f742bce1825fc294d6a,
         type: 3}
       propertyPath: photoWidth
-      value: 0.2
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 1725714743124522665, guid: 084572b9f1857f742bce1825fc294d6a,
         type: 3}

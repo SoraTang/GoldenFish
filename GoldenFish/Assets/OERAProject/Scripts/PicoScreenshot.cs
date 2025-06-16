@@ -24,7 +24,8 @@ public class PhotoCapture : MonoBehaviour
     private List<GameObject> photos = new List<GameObject>();
     private List<Vector3> gridPositions = new List<Vector3>(); // 存储所有网格位置
     private int totalPhotosTaken = 0;       // 总共拍摄的照片数量
-    private bool isTriggerPressed = false;  // 跟踪扳机状态
+    private bool isLeftTriggerPressed = false;  // 左手扳机状态
+    private bool isRightTriggerPressed = false; // 右手扳机状态
     private bool canTakePhoto = true;       // 控制是否允许拍照
     private float rowHeight = 0f;           // 行高（根据照片比例计算）
     private int originalCullingMask;        // 记录原始相机的culling mask
@@ -67,25 +68,47 @@ public class PhotoCapture : MonoBehaviour
 
     void Update()
     {
-        // 检测左手柄扳机
+        // 获取左右手柄设备
         InputDevice leftHand = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
-        if (leftHand.TryGetFeatureValue(CommonUsages.triggerButton, out bool triggerPressed))
+        InputDevice rightHand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
+
+        // 检测左手扳机状态
+        bool leftTriggerPressed = false;
+        if (leftHand.TryGetFeatureValue(CommonUsages.triggerButton, out bool leftPressed))
         {
-            // 只在扳机从释放状态变为按下状态时拍照
-            if (triggerPressed && !isTriggerPressed && canTakePhoto)
-            {
-                StartCoroutine(CapturePhoto());
-                canTakePhoto = false; // 防止连续拍照
-            }
-
-            // 当扳机释放时重置拍照能力
-            if (!triggerPressed)
-            {
-                canTakePhoto = true;
-            }
-
-            isTriggerPressed = triggerPressed; // 更新状态
+            leftTriggerPressed = leftPressed;
         }
+
+        // 检测右手扳机状态
+        bool rightTriggerPressed = false;
+        if (rightHand.TryGetFeatureValue(CommonUsages.triggerButton, out bool rightPressed))
+        {
+            rightTriggerPressed = rightPressed;
+        }
+
+        // 检查左手扳机按下事件
+        if (leftTriggerPressed && !isLeftTriggerPressed && canTakePhoto)
+        {
+            StartCoroutine(CapturePhoto());
+            canTakePhoto = false;
+        }
+
+        // 检查右手扳机按下事件
+        if (rightTriggerPressed && !isRightTriggerPressed && canTakePhoto)
+        {
+            StartCoroutine(CapturePhoto());
+            canTakePhoto = false;
+        }
+
+        // 当任一扳机释放时重置拍照能力
+        if (!leftTriggerPressed && !rightTriggerPressed)
+        {
+            canTakePhoto = true;
+        }
+
+        // 更新扳机状态
+        isLeftTriggerPressed = leftTriggerPressed;
+        isRightTriggerPressed = rightTriggerPressed;
     }
 
     IEnumerator CapturePhoto()
