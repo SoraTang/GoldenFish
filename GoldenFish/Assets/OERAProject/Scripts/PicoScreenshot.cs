@@ -17,6 +17,19 @@ public class PhotoCapture : MonoBehaviour
     public int maxPhotos = 20;               // 最大照片数量
     public LayerMask captureLayerMask;       // 设置需要捕捉的层
 
+    [Header("照片比例设置")]
+    public bool useCustomAspectRatio = false; // 是否使用自定义长宽比
+    [Range(0.1f, 3f)] public float aspectRatio = 1.7778f; // 照片长宽比（宽/高），默认16:9
+    public CropMode cropMode = CropMode.FitToWidth; // 裁剪模式
+
+    public enum CropMode
+    {
+        FitToWidth,    // 保持宽度，高度自适应（可能裁剪上下）
+        FitToHeight,   // 保持高度，宽度自适应（可能裁剪左右）
+        Letterbox,    // 完整显示（添加黑边）
+        Stretch       // 拉伸填充（默认行为）
+    }
+
     [Header("References")]
     public Transform photoWall;             // 陈列照片的平面
     public Camera captureCamera;            // 用于截图的相机
@@ -147,6 +160,12 @@ public class PhotoCapture : MonoBehaviour
 
         Destroy(renderTexture);
 
+        // 如果需要处理长宽比
+        if (useCustomAspectRatio)
+        {
+            photoTexture = ProcessAspectRatio(photoTexture);
+        }
+
         // 创建照片对象
         CreatePhotoObject(photoTexture);
 
@@ -154,6 +173,107 @@ public class PhotoCapture : MonoBehaviour
 
         // 更新照片计数
         totalPhotosTaken++;
+    }
+
+    Texture2D ProcessAspectRatio(Texture2D originalTexture)
+    {
+        int originalWidth = originalTexture.width;
+        int originalHeight = originalTexture.height;
+
+        float screenAspect = (float)originalWidth / originalHeight;
+        float targetAspect = aspectRatio;
+
+        // 如果不使用自定义比例，使用屏幕比例
+        if (!useCustomAspectRatio)
+        {
+            targetAspect = screenAspect;
+        }
+
+        // 计算裁剪/填充区域
+        int newWidth, newHeight;
+        float scale;
+        Rect cropRect;
+
+        switch (cropMode)
+        {
+            case CropMode.FitToWidth: // 保持宽度，裁剪高度
+                newWidth = originalWidth;
+                newHeight = Mathf.RoundToInt(originalWidth / targetAspect);
+                scale = 1f;
+                cropRect = new Rect(0, (originalHeight - newHeight) / 2, originalWidth, newHeight);
+                break;
+
+            case CropMode.FitToHeight: // 保持高度，裁剪宽度
+                newWidth = Mathf.RoundToInt(originalHeight * targetAspect);
+                newHeight = originalHeight;
+                scale = 1f;
+                cropRect = new Rect((originalWidth - newWidth) / 2, 0, newWidth, originalHeight);
+                break;
+
+            case CropMode.Letterbox: // 完整显示（添加黑边）
+                if (screenAspect > targetAspect) // 屏幕更宽
+                {
+                    newWidth = Mathf.RoundToInt(originalHeight * targetAspect);
+                    newHeight = originalHeight;
+                }
+                else // 屏幕更高
+                {
+                    newWidth = originalWidth;
+                    newHeight = Mathf.RoundToInt(originalWidth / targetAspect);
+                }
+
+                // 创建新纹理并填充黑色
+                Texture2D letterboxTexture = new Texture2D(newWidth, newHeight, TextureFormat.RGB24, false);
+                Color[] blackPixels = new Color[newWidth * newHeight];
+                for (int i = 0; i < blackPixels.Length; i++)
+                {
+                    blackPixels[i] = Color.black;
+                }
+                letterboxTexture.SetPixels(blackPixels);
+
+                // 计算居中位置
+                int pasteX = (newWidth - originalWidth) / 2;
+                int pasteY = (newHeight - originalHeight) / 2;
+
+                // 确保在有效范围内
+                pasteX = Mathf.Clamp(pasteX, 0, newWidth - originalWidth);
+                pasteY = Mathf.Clamp(pasteY, 0, newHeight - originalHeight);
+
+                // 粘贴原始图像
+                letterboxTexture.SetPixels(pasteX, pasteY, originalWidth, originalHeight, originalTexture.GetPixels());
+                letterboxTexture.Apply();
+
+                Destroy(originalTexture); // 销毁原始纹理
+                return letterboxTexture;
+
+            case CropMode.Stretch: // 拉伸填充（默认）
+            default:
+                newWidth = originalWidth;
+                newHeight = originalHeight;
+                cropRect = new Rect(0, 0, originalWidth, originalHeight);
+                break;
+        }
+
+        // 对于裁剪模式，创建新纹理并复制像素
+        if (cropMode == CropMode.FitToWidth || cropMode == CropMode.FitToHeight)
+        {
+            // 确保裁剪区域在有效范围内
+            cropRect.width = Mathf.Min(cropRect.width, originalWidth);
+            cropRect.height = Mathf.Min(cropRect.height, originalHeight);
+            cropRect.x = Mathf.Clamp(cropRect.x, 0, originalWidth - cropRect.width);
+            cropRect.y = Mathf.Clamp(cropRect.y, 0, originalHeight - cropRect.height);
+
+            // 创建新纹理
+            Texture2D croppedTexture = new Texture2D((int)cropRect.width, (int)cropRect.height, TextureFormat.RGB24, false);
+            croppedTexture.SetPixels(originalTexture.GetPixels((int)cropRect.x, (int)cropRect.y, (int)cropRect.width, (int)cropRect.height));
+            croppedTexture.Apply();
+
+            Destroy(originalTexture); // 销毁原始纹理
+            return croppedTexture;
+        }
+
+        // 对于拉伸模式，直接返回原始纹理
+        return originalTexture;
     }
 
     void CreatePhotoObject(Texture2D photoTexture)
@@ -168,9 +288,12 @@ public class PhotoCapture : MonoBehaviour
         photo.name = "Photo_" + totalPhotosTaken;
         photo.transform.SetParent(photoWall);
 
+        // 计算实际宽高比
+        float textureAspect = (float)photoTexture.width / photoTexture.height;
+
         // 设置材质和大小
         photo.GetComponent<Renderer>().material = photoMaterial;
-        photo.transform.localScale = new Vector3(photoWidth, photoWidth * (photoTexture.height / (float)photoTexture.width), 1);
+        photo.transform.localScale = new Vector3(photoWidth, photoWidth / textureAspect, 1);
 
         // 计算位置和旋转
         PlacePhotoWithRandomness(photo.transform);
